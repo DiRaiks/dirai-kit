@@ -1,6 +1,6 @@
 # Changelog
 
-Releases after 0.1.0 are described in [GitHub Releases](https://github.com/DiRaiks/tg-bot-kit/releases).
+Releases are published by [semantic-release](https://semantic-release.gitbook.io), and their notes are on [GitHub Releases](https://github.com/DiRaiks/tg-bot-kit/releases). This file is no longer updated.
 
 ## 0.1.0
 
