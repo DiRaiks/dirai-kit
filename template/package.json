@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@dirai/tg-kit": "^1.1.0",
+    "@dirai/tg-kit": "^1.2.0",
     "@prometheus-io/client": "^0.16.1",
     "fastify": "^5.12.7",
     "grammy": "^1.46.0",
