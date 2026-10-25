@@ -1,5 +1,7 @@
 # Changelog
 
+Releases after 0.1.0 are described in [GitHub Releases](https://github.com/DiRaiks/tg-bot-kit/releases).
+
 ## 0.1.0
 
 First release on npm, extracted from football-planner.

@@ -1,0 +1,36 @@
+name: Release
+
+# Every push to main is analysed by semantic-release: fix → patch, feat → minor,
+# BREAKING CHANGE → major. It tags the commit, publishes to npm with provenance over
+# OIDC (npm trusted publishing, no token stored) and creates a GitHub Release.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # npm publish runs prepublishOnly: lint, types, tests, build and the package check
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

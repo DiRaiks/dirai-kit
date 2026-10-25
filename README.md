@@ -10,13 +10,16 @@ npm install @dirai/tg-kit grammy fastify
 
 ## Releasing
 
-Versions are published from GitHub Actions with [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) and provenance, so no npm token is stored anywhere. Bump `version` in `package.json`, update `CHANGELOG.md`, then push a matching tag:
+Releases are automatic. Every push to `main` runs [semantic-release](https://semantic-release.gitbook.io), which reads the [Conventional Commits](https://www.conventionalcommits.org) since the last release:
 
-```bash
-git tag v0.1.1 && git push origin v0.1.1
-```
+| Commit                                           | Release |
+| ------------------------------------------------ | ------- |
+| `fix: …`                                         | patch   |
+| `feat: …`                                        | minor   |
+| `feat!: …` or a `BREAKING CHANGE:` footer        | major   |
+| `docs:`, `chore:`, `ci:`, `test:`, `refactor:` … | none    |
 
-The Publish workflow runs lint, types, tests, the build and a check that the package contains only `dist` and docs.
+It tags the commit, publishes to npm over OIDC ([trusted publishing](https://docs.npmjs.com/trusted-publishers), no npm token stored) with provenance, and creates a GitHub Release with the notes. Commit messages are checked by commitlint locally (husky) and on pull requests.
 
 ## Quick start
 
