@@ -37,6 +37,45 @@ describe('subscription commands', () => {
     expect(reply()).toBe('Чат отписан от уведомлений');
     expect(await store.get(10)).toBeNull();
   });
+
+  it('takes command descriptions and replies from the options', async () => {
+    const { app, api } = await buildBot({
+      subscriptionTexts: {
+        subscribeDescription: 'Subscribe this chat',
+        unsubscribeDescription: 'Unsubscribe this chat',
+        statusDescription: 'Subscriptions of this chat',
+        status: (topics) => `Topics: ${topics.join(', ') || 'none'}`,
+      },
+    });
+    close = () => app.close();
+
+    await app.tg.bot.handleUpdate(message('/help'));
+    const help = String(api.sent().at(-1)?.payload.text);
+    expect(help).toContain('/subscribe — Subscribe this chat');
+    expect(help).toContain('/unsubscribe — Unsubscribe this chat');
+    expect(help).toContain('/status — Subscriptions of this chat');
+
+    await app.tg.bot.handleUpdate(message('/status'));
+    expect(api.sent().at(-1)?.payload.text).toBe('Topics: none');
+  });
+
+  it('keeps the Russian descriptions by default', async () => {
+    const { app } = await buildBot();
+    close = () => app.close();
+
+    expect(
+      app.tg
+        .commands()
+        .filter(({ command }) =>
+          ['subscribe', 'unsubscribe', 'status'].includes(command),
+        )
+        .map(({ command, description }) => [command, description]),
+    ).toEqual([
+      ['subscribe', 'Подписать чат на уведомления'],
+      ['unsubscribe', 'Отписать чат от уведомлений'],
+      ['status', 'Подписки этого чата'],
+    ]);
+  });
 });
 
 const storeContract = (

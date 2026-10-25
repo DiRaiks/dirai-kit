@@ -9,6 +9,7 @@ import {
   tgSubscriptions,
   type SubscriptionStore,
   type TgBotOptions,
+  type TgSubscriptionsOptions,
 } from '../src/index.js';
 
 export const BOT_INFO: UserFromGetMe = {
@@ -77,9 +78,11 @@ export const buildBot = async ({
   topics = ['news', 'alerts'],
   minIntervalMs = 0,
   texts,
+  subscriptionTexts,
 }: {
   respond?: (call: ApiCall) => unknown;
   texts?: TgBotOptions['texts'];
+  subscriptionTexts?: TgSubscriptionsOptions['texts'];
   store?: SubscriptionStore;
   topics?: string[];
   minIntervalMs?: number;
@@ -94,7 +97,11 @@ export const buildBot = async ({
     configureApi: api.configureApi,
     texts,
   });
-  await app.register(tgSubscriptions, { store, topics });
+  await app.register(tgSubscriptions, {
+    store,
+    topics,
+    texts: subscriptionTexts,
+  });
   await app.register(tgNotifier, { minIntervalMs });
   await app.ready();
 

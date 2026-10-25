@@ -135,15 +135,15 @@ Two more needed                                    [ Sign up ]
 
 Creates the grammY bot as `app.tg.bot`, retries on rate limits and logs failed updates.
 
-| Option         | Description                                                                                                                                                      |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `token`        | Bot token from [@BotFather](https://t.me/BotFather)                                                                                                              |
-| `mode`         | `polling` (default), `webhook`, or `none` (tests, send-only bots)                                                                                                |
-| `webhook`      | `{ url, secretToken, path? }`. HTTPS base URL (a path prefix is kept); updates arrive at `path` (default `/telegram/webhook`) and must carry the secret token    |
-| `admins`       | Telegram user ids allowed to run `admin` commands                                                                                                                |
-| `botInfo`      | Skips `getMe`, for tests                                                                                                                                         |
-| `configureApi` | Extra API transformers, e.g. a fake API in tests                                                                                                                 |
-| `texts`        | Overrides for the `/start` reply, the `/help` title, the "forbidden" reply, and the descriptions of `/start` and `/help` (`startDescription`, `helpDescription`) |
+| Option         | Description                                                                                                                                                                                               |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `token`        | Bot token from [@BotFather](https://t.me/BotFather)                                                                                                                                                       |
+| `mode`         | `polling` (default), `webhook`, or `none` (tests, send-only bots)                                                                                                                                         |
+| `webhook`      | `{ url, secretToken, path? }`. HTTPS base URL (a path prefix is kept); updates arrive at `path` (default `/telegram/webhook`) and must carry the secret token                                             |
+| `admins`       | Telegram user ids allowed to run `admin` commands                                                                                                                                                         |
+| `botInfo`      | Skips `getMe`, for tests                                                                                                                                                                                  |
+| `configureApi` | Extra API transformers, e.g. a fake API in tests                                                                                                                                                          |
+| `texts`        | Overrides for the `/start` reply, the `/help` title, the "forbidden" reply, and the command descriptions (`helpDescription`; `startDescription` only shows in `app.tg.commands()`, as `/start` is hidden) |
 
 ```ts
 app.tg.command({ command, description, scope, hidden, handler });
@@ -160,6 +160,8 @@ On `ready` the plugin sets the command menu and starts polling or registers the 
 ### `tgSubscriptions`
 
 Adds `/subscribe [topic]`, `/unsubscribe [topic]` (both `chatAdmin`) and `/status`. Without a topic, `/subscribe` takes every topic and `/unsubscribe` removes the chat. The same operations are available in code as `app.subscriptions`.
+
+`texts` overrides the replies (`subscribed`, `unsubscribed`, `unknownTopic`, `status`) and the command descriptions (`subscribeDescription`, `unsubscribeDescription`, `statusDescription`); the defaults are in Russian.
 
 | Store                                      | Use                                                                                                                                                                                                                                         |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -226,6 +228,8 @@ Metrics come from the optional `@prometheus-io/client` (`npm install @prometheus
 
 `app.tg.events` reports `update`, `command`, `failure` and `delivery` for your own instrumentation; a listener that throws is logged and does not affect the bot.
 
+`safeEmit(app.tg.events, app.log, name, ...args)` emits one of these events the same way: a listener that throws is logged as a warning and the call returns normally. Use it to report events from your own code, e.g. `safeEmit(app.tg.events, app.log, 'delivery', { status: 'sent' })` after a message you send through `app.tg.bot.api`.
+
 ## Webhooks in production
 
 ```ts
@@ -236,11 +240,11 @@ await app.register(tgBot, {
 });
 ```
 
-Put the app behind a TLS-terminating proxy and route `/telegram/webhook` to it. With Caddy:
+Put the app behind a TLS-terminating proxy and route only `/telegram/webhook` to it, so `/telegram/health` and `/metrics` stay private. With Caddy:
 
 ```caddyfile
 bot.example.com {
-	reverse_proxy /telegram/* app:3000
+	reverse_proxy /telegram/webhook app:3000
 }
 ```
 
@@ -272,12 +276,12 @@ See [`test/helpers.ts`](test/helpers.ts) for a complete fake API and update buil
 
 Releases are automatic. Every push to `main` runs [semantic-release](https://semantic-release.gitbook.io) over the [Conventional Commits](https://www.conventionalcommits.org) since the last release:
 
-| Commit                                         | Release |
-| ---------------------------------------------- | ------- |
-| `fix: …`                                       | patch   |
-| `feat: …`                                      | minor   |
-| `feat!: …` or a `BREAKING CHANGE:` footer      | major   |
-| `docs:`, `chore:`, `ci:`, `test:`, `refactor:` | none    |
+| Commit                                                      | Release |
+| ----------------------------------------------------------- | ------- |
+| `fix: …`, `perf: …` or a revert                             | patch   |
+| `feat: …`                                                   | minor   |
+| `feat!: …`, `fix(scope)!: …` or a `BREAKING CHANGE:` footer | major   |
+| `docs:`, `chore:`, `ci:`, `test:`, `refactor:`              | none    |
 
 Versions are published from GitHub Actions with [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) (no npm token stored) and provenance, together with a GitHub Release. Commit messages are checked by commitlint locally and on pull requests.
 

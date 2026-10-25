@@ -23,8 +23,12 @@ export type TgBotTexts = {
   start: string;
   helpTitle: string;
   forbidden: string;
-  /** Descriptions of the built-in /start and /help in /help and the command menu */
+  /**
+   * Description of /start, seen only in `app.tg.commands()`: /start is hidden, so it is
+   * not listed in /help or the Telegram command menu
+   */
   startDescription: string;
+  /** Description of /help in /help and the Telegram command menu */
   helpDescription: string;
 };
 
