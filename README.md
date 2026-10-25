@@ -2,6 +2,32 @@
 
 Fastify 5 plugins for Telegram bots built on [grammY](https://grammy.dev): commands with access control, chat subscriptions to topics, and rate-limited HTML broadcasts.
 
+## Installation
+
+The package is published to GitHub Packages. Point the `@diraiks` scope there and authenticate with a GitHub token that has the `read:packages` scope:
+
+```ini
+# .npmrc in the project
+@diraiks:registry=https://npm.pkg.github.com
+```
+
+```bash
+# once per machine: allow the gh token to read packages, then add it to ~/.npmrc
+gh auth refresh -s read:packages
+npm config set //npm.pkg.github.com/:_authToken "$(gh auth token)"
+npm install @diraiks/tg-kit grammy fastify
+```
+
+In GitHub Actions of another repository, give that repository read access in the package settings (Package settings → Manage Actions access) and use `secrets.GITHUB_TOKEN` as `NODE_AUTH_TOKEN`.
+
+## Releasing
+
+Bump `version` in `package.json`, update `CHANGELOG.md`, then push a matching tag — the Publish workflow runs the checks and publishes:
+
+```bash
+git tag v0.1.1 && git push origin v0.1.1
+```
+
 ## Quick start
 
 ```ts
