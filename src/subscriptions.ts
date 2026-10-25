@@ -134,6 +134,117 @@ export const mongoStore = (
   };
 };
 
+/** The subset of a Postgres client used by the store: a `pg` Pool or Client, or PGlite */
+export type PgClientLike = {
+  query(text: string, values?: unknown[]): Promise<{ rows: unknown[] }>;
+};
+
+export type PgStoreOptions = {
+  /** Table of the chats, created on first use (default tg_chats); `schema.table` works */
+  table?: string;
+};
+
+type ChatRow = {
+  chat_id: string | number;
+  topics: string[] | null;
+  settings: Record<string, unknown> | null;
+};
+
+const TABLE_NAME = /^[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*)?$/;
+
+/**
+ * Chats in a Postgres table: `chat_id` bigint, `topics` text[] with a GIN index,
+ * `settings` jsonb. The table and index are created on first use, so a bot needs no
+ * migration of its own for them.
+ */
+export const pgStore = (
+  client: PgClientLike,
+  { table = 'tg_chats' }: PgStoreOptions = {},
+): SubscriptionStore => {
+  // The name goes into SQL as is: only plain identifiers are accepted
+  if (!TABLE_NAME.test(table)) {
+    throw new Error(`pgStore: invalid table name "${table}"`);
+  }
+  // An index takes the schema of its table, so its own name has no schema
+  const index = `${table.replace('.', '_')}_topics_idx`;
+
+  let ready: Promise<unknown> | null = null;
+  const query = async (text: string, values?: unknown[]) => {
+    ready ??= client
+      .query(
+        `CREATE TABLE IF NOT EXISTS ${table} (
+          chat_id bigint PRIMARY KEY,
+          topics text[] NOT NULL DEFAULT '{}',
+          settings jsonb NOT NULL DEFAULT '{}',
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now()
+        )`,
+      )
+      .then(() =>
+        client.query(
+          `CREATE INDEX IF NOT EXISTS ${index} ON ${table} USING gin (topics)`,
+        ),
+      )
+      .catch((error: unknown) => {
+        // Try again on the next call: the database may have been down
+        ready = null;
+        throw error;
+      });
+    await ready;
+    return (await client.query(text, values)).rows as ChatRow[];
+  };
+
+  // bigint arrives as a string from node-postgres; chat ids fit in a JS number
+  const toSubscription = (row: ChatRow): ChatSubscription => ({
+    chatId: Number(row.chat_id),
+    topics: row.topics ?? [],
+    settings: row.settings ?? {},
+  });
+  const columns = 'chat_id, topics, settings';
+
+  return {
+    async get(chatId) {
+      const [row] = await query(
+        `SELECT ${columns} FROM ${table} WHERE chat_id = $1`,
+        [chatId],
+      );
+      return row ? toSubscription(row) : null;
+    },
+    async save(chatId, update) {
+      const topics = update.topics ?? null;
+      const settings =
+        update.settings === undefined ? null : JSON.stringify(update.settings);
+      const [row] = await query(
+        `INSERT INTO ${table} AS t (chat_id, topics, settings)
+         VALUES ($1, COALESCE($2::text[], '{}'), COALESCE($3::jsonb, '{}'))
+         ON CONFLICT (chat_id) DO UPDATE SET
+           topics = COALESCE($2::text[], t.topics),
+           settings = COALESCE($3::jsonb, t.settings),
+           updated_at = now()
+         RETURNING ${columns}`,
+        [chatId, topics, settings],
+      );
+      return toSubscription(row!);
+    },
+    async remove(chatId) {
+      await query(`DELETE FROM ${table} WHERE chat_id = $1`, [chatId]);
+    },
+    async listByTopic(topic) {
+      const rows = await query(
+        `SELECT ${columns} FROM ${table} WHERE topics @> ARRAY[$1]::text[] ORDER BY chat_id`,
+        [topic],
+      );
+      return rows.map(toSubscription);
+    },
+    async list() {
+      const rows = await query(
+        `SELECT ${columns} FROM ${table} ORDER BY chat_id`,
+      );
+      return rows.map(toSubscription);
+    },
+  };
+};
+
 export type Subscriptions = {
   store: SubscriptionStore;
   topics: readonly string[];
