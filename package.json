@@ -45,7 +45,8 @@
     "prepublishOnly": "npm run lint && npm run types && npm test && npm run build && npm run pack:check",
     "pack:check": "node scripts/check-pack.mjs",
     "prepare": "husky",
-    "examples:types": "tsc -p examples/tsconfig.json"
+    "examples:types": "tsc -p examples/tsconfig.json",
+    "template:check": "tsc -p scripts/template/tsconfig.json && vitest run --config scripts/template/vitest.config.ts"
   },
   "dependencies": {
     "@grammyjs/auto-retry": "^2.0.2",

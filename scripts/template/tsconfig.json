@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../..",
+    "paths": { "@dirai/tg-kit": ["../../src/index.ts"] }
+  },
+  "include": ["../../template/src", "../../template/test"]
+}
