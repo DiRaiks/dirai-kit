@@ -1,8 +1,9 @@
 name: Release
 
 # Every push to main is analysed by semantic-release: fix → patch, feat → minor,
-# BREAKING CHANGE → major. It tags the commit, publishes to npm with provenance over
-# OIDC (npm trusted publishing, no token stored) and creates a GitHub Release.
+# feat! or BREAKING CHANGE → major. After the CI checks pass it tags the commit,
+# publishes to npm with provenance over OIDC (npm trusted publishing, no token
+# stored) and creates a GitHub Release.
 on:
   push:
     branches: [main]
@@ -18,7 +19,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The same checks as CI (lint, format, types, tests, build, example, template,
+  # package); nothing is published unless they pass
+  checks:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   release:
+    needs: checks
     runs-on: ubuntu-latest
     environment: npm
     steps:
@@ -30,7 +39,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # npm publish runs prepublishOnly: lint, types, tests, build and the package check
+      # npm publish also runs prepublishOnly: lint, types, tests, build and the package check
       - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
