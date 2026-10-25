@@ -135,15 +135,15 @@ Two more needed                                    [ Sign up ]
 
 Creates the grammY bot as `app.tg.bot`, retries on rate limits and logs failed updates.
 
-| Option         | Description                                                                                                                                                      |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `token`        | Bot token from [@BotFather](https://t.me/BotFather)                                                                                                              |
-| `mode`         | `polling` (default), `webhook`, or `none` (tests, send-only bots)                                                                                                |
-| `webhook`      | `{ url, secretToken, path? }`. HTTPS base URL (a path prefix is kept); updates arrive at `path` (default `/telegram/webhook`) and must carry the secret token    |
-| `admins`       | Telegram user ids allowed to run `admin` commands                                                                                                                |
-| `botInfo`      | Skips `getMe`, for tests                                                                                                                                         |
-| `configureApi` | Extra API transformers, e.g. a fake API in tests                                                                                                                 |
-| `texts`        | Overrides for the `/start` reply, the `/help` title, the "forbidden" reply, and the descriptions of `/start` and `/help` (`startDescription`, `helpDescription`) |
+| Option         | Description                                                                                                                                                                                               |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `token`        | Bot token from [@BotFather](https://t.me/BotFather)                                                                                                                                                       |
+| `mode`         | `polling` (default), `webhook`, or `none` (tests, send-only bots)                                                                                                                                         |
+| `webhook`      | `{ url, secretToken, path? }`. HTTPS base URL (a path prefix is kept); updates arrive at `path` (default `/telegram/webhook`) and must carry the secret token                                             |
+| `admins`       | Telegram user ids allowed to run `admin` commands                                                                                                                                                         |
+| `botInfo`      | Skips `getMe`, for tests                                                                                                                                                                                  |
+| `configureApi` | Extra API transformers, e.g. a fake API in tests                                                                                                                                                          |
+| `texts`        | Overrides for the `/start` reply, the `/help` title, the "forbidden" reply, and the command descriptions (`helpDescription`; `startDescription` only shows in `app.tg.commands()`, as `/start` is hidden) |
 
 ```ts
 app.tg.command({ command, description, scope, hidden, handler });
@@ -160,6 +160,8 @@ On `ready` the plugin sets the command menu and starts polling or registers the 
 ### `tgSubscriptions`
 
 Adds `/subscribe [topic]`, `/unsubscribe [topic]` (both `chatAdmin`) and `/status`. Without a topic, `/subscribe` takes every topic and `/unsubscribe` removes the chat. The same operations are available in code as `app.subscriptions`.
+
+`texts` overrides the replies (`subscribed`, `unsubscribed`, `unknownTopic`, `status`) and the command descriptions (`subscribeDescription`, `unsubscribeDescription`, `statusDescription`); the defaults are in Russian.
 
 | Store                                      | Use                                                                                                                                                                                                                                         |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -151,6 +151,10 @@ export type SubscriptionsTexts = {
   unsubscribed: string;
   unknownTopic: (topic: string, topics: readonly string[]) => string;
   status: (topics: string[]) => string;
+  /** Descriptions of /subscribe, /unsubscribe and /status in /help and the command menu */
+  subscribeDescription: string;
+  unsubscribeDescription: string;
+  statusDescription: string;
 };
 
 export type TgSubscriptionsOptions = {
@@ -177,6 +181,9 @@ const DEFAULT_TEXTS: SubscriptionsTexts = {
     topics.length
       ? `Подписки чата: ${topics.join(', ')}`
       : 'Чат ни на что не подписан',
+  subscribeDescription: 'Подписать чат на уведомления',
+  unsubscribeDescription: 'Отписать чат от уведомлений',
+  statusDescription: 'Подписки этого чата',
 };
 
 const tgSubscriptionsPlugin: FastifyPluginAsync<
@@ -217,7 +224,7 @@ const tgSubscriptionsPlugin: FastifyPluginAsync<
 
   fastify.tg.command({
     command: 'subscribe',
-    description: 'Подписать чат на уведомления',
+    description: texts.subscribeDescription,
     scope: 'chatAdmin',
     handler: async (ctx) => {
       const parsed = parseTopic(String(ctx.match ?? ''));
@@ -234,7 +241,7 @@ const tgSubscriptionsPlugin: FastifyPluginAsync<
 
   fastify.tg.command({
     command: 'unsubscribe',
-    description: 'Отписать чат от уведомлений',
+    description: texts.unsubscribeDescription,
     scope: 'chatAdmin',
     handler: async (ctx) => {
       const parsed = parseTopic(String(ctx.match ?? ''));
@@ -248,7 +255,7 @@ const tgSubscriptionsPlugin: FastifyPluginAsync<
 
   fastify.tg.command({
     command: 'status',
-    description: 'Подписки этого чата',
+    description: texts.statusDescription,
     handler: async (ctx) => {
       const chat = await store.get(ctx.chat!.id);
       return ctx.reply(texts.status(chat?.topics ?? []));

@@ -47,6 +47,8 @@ describe('tgBot', () => {
     const help = String(lastReply(api.sent));
     expect(help.startsWith('Commands:\n')).toBe(true);
     expect(help).toContain('/help — List commands');
+    // /start is hidden, so its description only shows in app.tg.commands()
+    expect(help).not.toContain('Start');
     await app.tg.bot.handleUpdate(message('/start'));
     expect(lastReply(api.sent)).toBe('Hi! Commands: /help');
     expect(
