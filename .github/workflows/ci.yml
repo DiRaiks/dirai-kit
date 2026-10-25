@@ -27,4 +27,6 @@ jobs:
       - run: npm run build
       # The example imports the package by name, so it is checked against the build
       - run: npm run examples:types
+      # The template people start new bots from must keep working with the kit
+      - run: npm run template:check
       - run: npm run pack:check

@@ -68,6 +68,18 @@ A complete bot with an admin command, a protected HTTP endpoint and health check
 BOT_TOKEN=123:abc ANNOUNCE_KEY=secret npx tsx examples/minimal-bot/index.ts
 ```
 
+## Start a new bot
+
+The [`template`](template) is a complete bot to copy: config from the environment, commands, subscriptions in MongoDB, an announce endpoint, health checks, metrics, tests and a Dockerfile.
+
+```bash
+npx degit DiRaiks/tg-bot-kit/template my-bot
+cd my-bot && npm install && cp .env.example .env   # set BOT_TOKEN
+npm run dev
+```
+
+CI checks the template against every change of the kit.
+
 ## How it fits together
 
 ```mermaid

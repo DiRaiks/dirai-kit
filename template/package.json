@@ -1,0 +1,30 @@
+{
+  "name": "my-telegram-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.10"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "types": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dirai/tg-kit": "^1.1.0",
+    "@prometheus-io/client": "^0.16.1",
+    "fastify": "^5.12.7",
+    "grammy": "^1.46.0",
+    "mongodb": "^7.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "fastify-tsconfig": "^3.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  }
+}
