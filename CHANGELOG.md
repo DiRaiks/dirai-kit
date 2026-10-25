@@ -2,7 +2,7 @@
 
 ## 0.1.0
 
-First release, extracted from football-planner.
+First release on npm, extracted from football-planner.
 
 - `tgBot`: commands with `all` / `admin` / `chatAdmin` scopes, `/help` and the command menu, polling, webhook (secret token, https) and `none` modes, auto-retry, startup that survives a Telegram outage
 - `tgSubscriptions`: topics per chat, `/subscribe`, `/unsubscribe`, `/status`, `memoryStore` and `mongoStore` with legacy topics
