@@ -1,4 +1,4 @@
-export { tgBot } from './bot.js';
+export { safeEmit, tgBot } from './bot.js';
 export type {
   BotMode,
   CommandDefinition,
@@ -6,7 +6,15 @@ export type {
   TgBot,
   TgBotOptions,
   TgBotTexts,
+  TgEvents,
 } from './bot.js';
+export { tgHealth } from './health.js';
+export type {
+  MetricsRegistry,
+  TgHealth,
+  TgHealthOptions,
+  TgHealthReport,
+} from './health.js';
 export { memoryStore, mongoStore, tgSubscriptions } from './subscriptions.js';
 export type {
   ChatSubscription,

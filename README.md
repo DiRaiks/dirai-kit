@@ -23,6 +23,7 @@ Most bots repeat the same plumbing: `/start` and `/help`, a list of chats to not
 - **Live messages.** Send, pin, edit and unpin, plus silent sends, to keep a status message up to date while short updates go out quietly.
 - **Safe HTML.** A template tag that escapes everything you interpolate.
 - **Polling, webhook or none.** Webhooks check Telegram's secret token; `none` is for tests and send-only bots.
+- **Health and metrics.** A health report with webhook errors from Telegram, and Prometheus counters for updates, commands and deliveries.
 - **Testable.** Plug in a fake Telegram API and feed updates directly.
 
 ## Install
@@ -60,6 +61,12 @@ await app.listen({ port: 3000 });
 ```
 
 Add the bot to a chat, send `/subscribe`, then `curl -X POST localhost:3000/announce`.
+
+A complete bot with an admin command, a protected HTTP endpoint and health checks is in [`examples/minimal-bot`](examples/minimal-bot/index.ts):
+
+```bash
+BOT_TOKEN=123:abc ANNOUNCE_KEY=secret npx tsx examples/minimal-bot/index.ts
+```
 
 ## How it fits together
 
@@ -170,6 +177,42 @@ html`${html`<i>nested</i>`}`;        // nested templates stay markup
 raw('<a href="…">trusted</a>');      // inserted as is
 joinHtml([title, maybeLine, footer]); // skips null, undefined and false; joins with \n
 ```
+
+### `tgHealth`
+
+```ts
+await app.register(tgHealth); // GET /telegram/health and GET /metrics
+```
+
+The health report answers 503 when the bot cannot get updates: polling stopped, no webhook set, Telegram failing to deliver to the webhook in the last 10 minutes while updates wait, or the subscription store not answering. Telegram is asked at most every 30 seconds, and every check gives up after 5 seconds.
+
+```json
+{
+  "ok": true,
+  "mode": "webhook",
+  "username": "my_bot",
+  "polling": null,
+  "webhook": { "set": true, "host": "bot.example.com", "pendingUpdates": 0, "lastError": null, "lastErrorAt": null },
+  "store": "ok",
+  "queue": 0
+}
+```
+
+The report shows the webhook's host, not its URL, so a secret path does not leak. Both routes are open by default; pass `onRequest` to protect them, or keep them off the public proxy.
+
+| Option             | Description                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `healthPath`       | Route of the report (default `/telegram/health`), `false` to skip                             |
+| `metricsPath`      | Route of the Prometheus metrics (default `/metrics`), `false` to skip                         |
+| `registry`         | A [Prometheus client](https://github.com/prometheus/client_js) registry to add the metrics to |
+| `prefix`           | Metric name prefix (default `tg_`)                                                            |
+| `onRequest`        | A Fastify hook run before both routes, e.g. a token check                                     |
+| `webhookInfoTtlMs` | How long Telegram's webhook report is reused (default 30 s)                                   |
+| `timeoutMs`        | Longest wait for Telegram or the store (default 5 s)                                          |
+
+Metrics come from the optional `@prometheus-io/client` (`npm install @prometheus-io/client`; it used to be `prom-client`): `tg_updates_total`, `tg_update_errors_total`, `tg_commands_total{command,allowed}`, `tg_messages_total{status}` (sent, failed, removed) and `tg_notifier_queue`. Without the package the plugin logs a warning and serves the report only. An app with its own metrics passes its registry and `metricsPath: false`; several apps may share one registry. An app with its own `/health` calls `app.tgHealth.check()` and sets `healthPath: false`.
+
+`app.tg.events` reports `update`, `command`, `failure` and `delivery` for your own instrumentation; a listener that throws is logged and does not affect the bot.
 
 ## Webhooks in production
 
