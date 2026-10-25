@@ -274,12 +274,12 @@ See [`test/helpers.ts`](test/helpers.ts) for a complete fake API and update buil
 
 Releases are automatic. Every push to `main` runs [semantic-release](https://semantic-release.gitbook.io) over the [Conventional Commits](https://www.conventionalcommits.org) since the last release:
 
-| Commit                                         | Release |
-| ---------------------------------------------- | ------- |
-| `fix: …`                                       | patch   |
-| `feat: …`                                      | minor   |
-| `feat!: …` or a `BREAKING CHANGE:` footer      | major   |
-| `docs:`, `chore:`, `ci:`, `test:`, `refactor:` | none    |
+| Commit                                                      | Release |
+| ----------------------------------------------------------- | ------- |
+| `fix: …`, `perf: …` or a revert                             | patch   |
+| `feat: …`                                                   | minor   |
+| `feat!: …`, `fix(scope)!: …` or a `BREAKING CHANGE:` footer | major   |
+| `docs:`, `chore:`, `ci:`, `test:`, `refactor:`              | none    |
 
 Versions are published from GitHub Actions with [npm trusted publishing](https://docs.npmjs.com/trusted-publishers) (no npm token stored) and provenance, together with a GitHub Release. Commit messages are checked by commitlint locally and on pull requests.
 
