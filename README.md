@@ -228,6 +228,8 @@ Metrics come from the optional `@prometheus-io/client` (`npm install @prometheus
 
 `app.tg.events` reports `update`, `command`, `failure` and `delivery` for your own instrumentation; a listener that throws is logged and does not affect the bot.
 
+`safeEmit(app.tg.events, app.log, name, ...args)` emits one of these events the same way: a listener that throws is logged as a warning and the call returns normally. Use it to report events from your own code, e.g. `safeEmit(app.tg.events, app.log, 'delivery', { status: 'sent' })` after a message you send through `app.tg.bot.api`.
+
 ## Webhooks in production
 
 ```ts
@@ -238,11 +240,11 @@ await app.register(tgBot, {
 });
 ```
 
-Put the app behind a TLS-terminating proxy and route `/telegram/webhook` to it. With Caddy:
+Put the app behind a TLS-terminating proxy and route only `/telegram/webhook` to it, so `/telegram/health` and `/metrics` stay private. With Caddy:
 
 ```caddyfile
 bot.example.com {
-	reverse_proxy /telegram/* app:3000
+	reverse_proxy /telegram/webhook app:3000
 }
 ```
 
