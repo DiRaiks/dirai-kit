@@ -1,3 +1,4 @@
+import { PGlite } from '@electric-sql/pglite';
 import { MongoClient } from 'mongodb';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -5,6 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import {
   memoryStore,
   mongoStore,
+  pgStore,
   type SubscriptionStore,
 } from '../src/index.js';
 import { buildBot, message } from './helpers.js';
@@ -113,6 +115,78 @@ const storeContract = (
 };
 
 storeContract('memoryStore', async () => memoryStore());
+
+describe('pgStore', () => {
+  let db: PGlite;
+  let n = 0;
+
+  beforeAll(async () => {
+    db = await PGlite.create();
+  });
+
+  afterAll(async () => {
+    await db?.close();
+  });
+
+  storeContract('contract', async () => pgStore(db, { table: `chats_${++n}` }));
+
+  it('creates its table once and keeps chats across store instances', async () => {
+    const first = pgStore(db, { table: 'shared_chats' });
+    await first.save(-1001234567890, {
+      topics: ['events'],
+      settings: { nested: { list: [1, 'two'] } },
+    });
+
+    // A restart: a new store over the same table
+    const second = pgStore(db, { table: 'shared_chats' });
+    expect(await second.get(-1001234567890)).toEqual({
+      chatId: -1001234567890,
+      topics: ['events'],
+      settings: { nested: { list: [1, 'two'] } },
+    });
+    expect(await second.list()).toHaveLength(1);
+  });
+
+  it('keeps fields the update leaves out', async () => {
+    const store = pgStore(db, { table: `chats_${++n}` });
+    await store.save(7, { topics: ['a'], settings: { x: 1 } });
+    expect(await store.save(7, { topics: ['b'] })).toEqual({
+      chatId: 7,
+      topics: ['b'],
+      settings: { x: 1 },
+    });
+    expect(await store.save(7, { settings: {} })).toEqual({
+      chatId: 7,
+      topics: ['b'],
+      settings: {},
+    });
+  });
+
+  it('works in a schema and refuses table names that are not identifiers', async () => {
+    await db.query('CREATE SCHEMA IF NOT EXISTS bot');
+    const store = pgStore(db, { table: 'bot.chats' });
+    await store.save(1, { topics: ['x'] });
+    expect((await store.listByTopic('x')).map((c) => c.chatId)).toEqual([1]);
+
+    expect(() => pgStore(db, { table: 'chats; DROP TABLE x' })).toThrow(
+      /invalid table name/,
+    );
+  });
+
+  it('retries creating the table after the database failed', async () => {
+    let fail = true;
+    const flaky = {
+      query: (text: string, values?: unknown[]) => {
+        if (fail) return Promise.reject(new Error('connection refused'));
+        return db.query(text, values);
+      },
+    };
+    const store = pgStore(flaky, { table: `chats_${++n}` });
+    await expect(store.list()).rejects.toThrow('connection refused');
+    fail = false;
+    expect(await store.list()).toEqual([]);
+  });
+});
 
 describe('mongoStore', () => {
   let mongo: MongoMemoryServer;

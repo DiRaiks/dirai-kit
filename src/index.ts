@@ -15,11 +15,18 @@ export type {
   TgHealthOptions,
   TgHealthReport,
 } from './health.js';
-export { memoryStore, mongoStore, tgSubscriptions } from './subscriptions.js';
+export {
+  memoryStore,
+  mongoStore,
+  pgStore,
+  tgSubscriptions,
+} from './subscriptions.js';
 export type {
   ChatSubscription,
   MongoCollectionLike,
   MongoStoreOptions,
+  PgClientLike,
+  PgStoreOptions,
   SubscriptionStore,
   Subscriptions,
   SubscriptionsTexts,

@@ -18,7 +18,7 @@ Most bots repeat the same plumbing: `/start` and `/help`, a list of chats to not
 ## Features
 
 - **Commands with scopes.** Everyone, bot admins, or admins of the group (anonymous admins and channels included). `/help` and the Telegram command menu are generated.
-- **Subscriptions.** `/subscribe`, `/unsubscribe`, `/status` per topic, stored in memory or MongoDB, with per-chat settings.
+- **Subscriptions.** `/subscribe`, `/unsubscribe`, `/status` per topic, stored in memory, MongoDB or Postgres, with per-chat settings.
 - **Broadcasts that behave.** One queue under Telegram's rate limits, automatic retries on 429, chats that blocked the bot are unsubscribed, groups upgraded to supergroups are followed.
 - **Live messages.** Send, pin, edit and unpin, plus silent sends, to keep a status message up to date while short updates go out quietly.
 - **Safe HTML.** A template tag that escapes everything you interpolate.
@@ -90,7 +90,7 @@ flowchart LR
     subs["tgSubscriptions<br/><sub>/subscribe, /unsubscribe, /status</sub>"]
     notifier["tgNotifier<br/><sub>queue, retries, cleanup</sub>"]
   end
-  store[("memoryStore<br/>or mongoStore")]
+  store[("memoryStore, mongoStore<br/>or pgStore")]
   tg["Telegram Bot API"]
 
   code -- "notify / send / edit" --> notifier
@@ -163,10 +163,11 @@ Adds `/subscribe [topic]`, `/unsubscribe [topic]` (both `chatAdmin`) and `/statu
 
 `texts` overrides the replies (`subscribed`, `unsubscribed`, `unknownTopic`, `status`) and the command descriptions (`subscribeDescription`, `unsubscribeDescription`, `statusDescription`); the defaults are in Russian.
 
-| Store                                      | Use                                                                                                                                                                                                                                         |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `memoryStore()`                            | Tests and throwaway bots                                                                                                                                                                                                                    |
-| `mongoStore(collection, { legacyTopics })` | Any MongoDB collection (driver or `mongoose.connection.collection(...)`). Documents are `{ chatId, topics, settings }`; documents without `topics` count as subscribed to `legacyTopics`, so a bot can adopt an existing `chats` collection |
+| Store                                      | Use                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `memoryStore()`                            | Tests and throwaway bots                                                                                                                                                                                                                                                                           |
+| `mongoStore(collection, { legacyTopics })` | Any MongoDB collection (driver or `mongoose.connection.collection(...)`). Documents are `{ chatId, topics, settings }`; documents without `topics` count as subscribed to `legacyTopics`, so a bot can adopt an existing `chats` collection                                                        |
+| `pgStore(client, { table })`               | Any Postgres client with `query(text, values)`: a `pg` Pool or Client, or PGlite. Chats live in `table` (default `tg_chats`, `schema.table` works) with `chat_id` bigint, `topics` text[] (GIN index) and `settings` jsonb; the table is created on first use. The kit does not depend on a driver |
 
 `settings` holds free-form per-chat data, such as watched addresses.
 

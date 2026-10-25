@@ -58,6 +58,7 @@
     "@prometheus-io/client": "^0.16.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.9",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^10.0.1",
