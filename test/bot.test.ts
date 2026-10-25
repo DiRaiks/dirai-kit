@@ -1,5 +1,7 @@
+import { BotError } from 'grammy';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { html } from '../src/index.js';
 import { ADMIN_ID, apiError, buildBot, message } from './helpers.js';
 
 let close: (() => Promise<void>) | undefined;
@@ -128,5 +130,30 @@ describe('tgBot', () => {
     );
 
     expect(api.sent().at(-1)?.payload.text).toBe('Эта команда вам недоступна.');
+  });
+
+  it('handles a failing update without any listeners', async () => {
+    const { app } = await buildBot();
+    close = () => app.close();
+    const failure = new BotError(new Error('handler failed'), {
+      update: { update_id: 1 },
+    } as never);
+    // Polling and webhooks call the error handler; it must not throw itself
+    // (Node's EventEmitter throws on an `error` event nobody listens to)
+    expect(() => app.tg.bot.errorHandler(failure)).not.toThrow();
+  });
+
+  it('keeps a failing event listener away from the bot', async () => {
+    const { app, api } = await buildBot();
+    close = () => app.close();
+    app.tg.events?.on('update', () => {
+      throw new Error('listener failed');
+    });
+    app.tg.events?.on('delivery', () => {
+      throw new Error('listener failed');
+    });
+    await app.tg.bot.handleUpdate(message('/help'));
+    expect(api.sent()).toHaveLength(1);
+    expect(await app.notifier.send(10, html`hi`)).toMatchObject({ chatId: 10 });
   });
 });

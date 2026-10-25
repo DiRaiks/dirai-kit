@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { GrammyError } from 'grammy';
 import type { InlineKeyboardMarkup } from 'grammy/types';
 
+import { safeEmit } from './bot.js';
 import type { Html } from './html.js';
 
 export type SendOptions = {
@@ -45,6 +46,8 @@ export type Notifier = {
     options?: EditOptions,
   ): Promise<boolean>;
   unpin(target: SentMessage): Promise<boolean>;
+  /** API calls queued or in flight; optional in the type for hand-made fakes */
+  queueSize?(): number;
 };
 
 export type TgNotifierOptions = {
@@ -88,10 +91,12 @@ const tgNotifierPlugin: FastifyPluginAsync<TgNotifierOptions> = async (
     : undefined;
 
   let queue: Promise<unknown> = Promise.resolve();
+  let waiting = 0;
   let lastCallAt = 0;
 
   /** Runs API calls one after another with at least `minIntervalMs` between them */
   const enqueue = <T>(task: () => Promise<T>): Promise<T> => {
+    waiting += 1;
     const run = queue.then(async () => {
       const wait = lastCallAt + minIntervalMs - Date.now();
       if (wait > 0) await sleep(wait);
@@ -99,6 +104,7 @@ const tgNotifierPlugin: FastifyPluginAsync<TgNotifierOptions> = async (
         return await task();
       } finally {
         lastCallAt = Date.now();
+        waiting -= 1;
       }
     });
     queue = run.catch(() => undefined);
@@ -172,6 +178,13 @@ const tgNotifierPlugin: FastifyPluginAsync<TgNotifierOptions> = async (
     return { chatId, messageId: sent.message_id };
   };
 
+  const report = (delivery: Delivery) => {
+    safeEmit(fastify.tg.events, fastify.log, 'delivery', {
+      status: delivery.status,
+    });
+    return delivery;
+  };
+
   const deliver = (chatId: number, message: Html, options: SendOptions = {}) =>
     enqueue(async (): Promise<Delivery> => {
       try {
@@ -200,7 +213,7 @@ const tgNotifierPlugin: FastifyPluginAsync<TgNotifierOptions> = async (
         fastify.log.error({ err: error, chatId }, 'telegram send failed');
         return { status: 'failed' };
       }
-    });
+    }).then(report);
 
   fastify.decorate('notifier', {
     async notify(topic, message, sendOptions) {
@@ -221,6 +234,8 @@ const tgNotifierPlugin: FastifyPluginAsync<TgNotifierOptions> = async (
         ),
       };
     },
+
+    queueSize: () => waiting,
 
     async send(chatId, message, sendOptions) {
       const result = await deliver(chatId, message, sendOptions);

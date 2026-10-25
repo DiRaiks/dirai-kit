@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import fp from 'fastify-plugin';
 import type { FastifyPluginAsync } from 'fastify';
 import { Bot, webhookCallback, type Api, type Context } from 'grammy';
@@ -45,9 +46,41 @@ export type TgBotOptions = {
   texts?: Partial<TgBotTexts>;
 };
 
+/**
+ * What the kit reports as it works; tgHealth turns these into metrics. (No `error`
+ * event: Node's EventEmitter throws on an `error` nobody listens to.)
+ */
+export type TgEvents = {
+  update: [];
+  command: [{ command: string; allowed: boolean }];
+  failure: [];
+  delivery: [{ status: 'sent' | 'failed' | 'removed' }];
+};
+
+/** Emits without letting a listener's error reach the caller */
+export const safeEmit = <K extends keyof TgEvents>(
+  events: EventEmitter<TgEvents> | undefined,
+  log: { warn: (obj: object, msg: string) => void },
+  name: K,
+  ...args: TgEvents[K]
+) => {
+  if (!events) return;
+  try {
+    (events.emit as (event: K, ...rest: unknown[]) => boolean).call(
+      events,
+      name,
+      ...args,
+    );
+  } catch (error) {
+    log.warn({ err: error, event: name }, 'tg-kit event listener failed');
+  }
+};
+
 export type TgBot = {
   bot: Bot;
   mode: BotMode;
+  /** Optional in the type so hand-made fakes of `app.tg` keep compiling */
+  events?: EventEmitter<TgEvents>;
   /** Registers a command with an access check and lists it in /help */
   command: (definition: CommandDefinition) => void;
   commands: () => readonly CommandDefinition[];
@@ -90,7 +123,14 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
   options.configureApi?.(bot.api);
   bot.api.config.use(autoRetry({ maxRetryAttempts: 3, maxDelaySeconds: 30 }));
 
+  const events = new EventEmitter<TgEvents>();
+  bot.use((_ctx, next) => {
+    safeEmit(events, fastify.log, 'update');
+    return next();
+  });
+
   bot.catch(({ error, ctx }) => {
+    safeEmit(events, fastify.log, 'failure');
     fastify.log.error(
       { err: error, updateId: ctx.update.update_id },
       'telegram update failed',
@@ -130,7 +170,12 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
   const command = (definition: CommandDefinition) => {
     registry.push(definition);
     bot.command(definition.command, async (ctx) => {
-      if (!(await isAllowed(ctx, definition.scope ?? 'all'))) {
+      const allowed = await isAllowed(ctx, definition.scope ?? 'all');
+      safeEmit(events, fastify.log, 'command', {
+        command: definition.command,
+        allowed,
+      });
+      if (!allowed) {
         await ctx.reply(texts.forbidden);
         return;
       }
@@ -218,6 +263,7 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
   fastify.decorate('tg', {
     bot,
     mode,
+    events,
     command,
     commands: () => registry,
     isAdmin,
