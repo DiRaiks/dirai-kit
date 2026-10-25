@@ -123,15 +123,15 @@ Two more needed                                    [ Sign up ]
 
 Creates the grammY bot as `app.tg.bot`, retries on rate limits and logs failed updates.
 
-| Option         | Description                                                                                                                                                   |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `token`        | Bot token from [@BotFather](https://t.me/BotFather)                                                                                                           |
-| `mode`         | `polling` (default), `webhook`, or `none` (tests, send-only bots)                                                                                             |
-| `webhook`      | `{ url, secretToken, path? }`. HTTPS base URL (a path prefix is kept); updates arrive at `path` (default `/telegram/webhook`) and must carry the secret token |
-| `admins`       | Telegram user ids allowed to run `admin` commands                                                                                                             |
-| `botInfo`      | Skips `getMe`, for tests                                                                                                                                      |
-| `configureApi` | Extra API transformers, e.g. a fake API in tests                                                                                                              |
-| `texts`        | Overrides for `/start`, the `/help` title and the "forbidden" reply                                                                                           |
+| Option         | Description                                                                                                                                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `token`        | Bot token from [@BotFather](https://t.me/BotFather)                                                                                                              |
+| `mode`         | `polling` (default), `webhook`, or `none` (tests, send-only bots)                                                                                                |
+| `webhook`      | `{ url, secretToken, path? }`. HTTPS base URL (a path prefix is kept); updates arrive at `path` (default `/telegram/webhook`) and must carry the secret token    |
+| `admins`       | Telegram user ids allowed to run `admin` commands                                                                                                                |
+| `botInfo`      | Skips `getMe`, for tests                                                                                                                                         |
+| `configureApi` | Extra API transformers, e.g. a fake API in tests                                                                                                                 |
+| `texts`        | Overrides for the `/start` reply, the `/help` title, the "forbidden" reply, and the descriptions of `/start` and `/help` (`startDescription`, `helpDescription`) |
 
 ```ts
 app.tg.command({ command, description, scope, hidden, handler });

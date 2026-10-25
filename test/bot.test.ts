@@ -32,6 +32,35 @@ describe('tgBot', () => {
     expect(adminHelp).toContain('/secret — Admin only');
   });
 
+  it('takes the texts of its own commands from the options', async () => {
+    const { app, api } = await buildBot({
+      texts: {
+        start: 'Hi! Commands: /help',
+        helpTitle: 'Commands:',
+        startDescription: 'Start',
+        helpDescription: 'List commands',
+      },
+    });
+    close = () => app.close();
+
+    await app.tg.bot.handleUpdate(message('/help'));
+    const help = String(lastReply(api.sent));
+    expect(help.startsWith('Commands:\n')).toBe(true);
+    expect(help).toContain('/help — List commands');
+    await app.tg.bot.handleUpdate(message('/start'));
+    expect(lastReply(api.sent)).toBe('Hi! Commands: /help');
+    expect(
+      app.tg
+        .commands()
+        .map(({ command, description }) => [command, description]),
+    ).toEqual(
+      expect.arrayContaining([
+        ['start', 'Start'],
+        ['help', 'List commands'],
+      ]),
+    );
+  });
+
   it('enforces command scopes', async () => {
     const { app, api } = await buildBot();
     close = () => app.close();

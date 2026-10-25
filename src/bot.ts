@@ -23,6 +23,9 @@ export type TgBotTexts = {
   start: string;
   helpTitle: string;
   forbidden: string;
+  /** Descriptions of the built-in /start and /help in /help and the command menu */
+  startDescription: string;
+  helpDescription: string;
 };
 
 export type TgBotOptions = {
@@ -97,6 +100,8 @@ const DEFAULT_TEXTS: TgBotTexts = {
   start: 'Привет! Список команд: /help',
   helpTitle: 'Команды:',
   forbidden: 'Эта команда вам недоступна.',
+  startDescription: 'Начать',
+  helpDescription: 'Список команд',
 };
 
 const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
@@ -188,13 +193,13 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
 
   command({
     command: 'start',
-    description: 'Начать',
+    description: texts.startDescription,
     hidden: true,
     handler: (ctx) => ctx.reply(texts.start),
   });
   command({
     command: 'help',
-    description: 'Список команд',
+    description: texts.helpDescription,
     handler: (ctx) => {
       const isBotAdmin = isAdmin(ctx.from?.id);
       const lines = visibleCommands()
