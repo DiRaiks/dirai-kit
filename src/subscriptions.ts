@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin';
 import type { FastifyPluginAsync } from 'fastify';
+import type { Localized } from './text.js';
 
 export type ChatSubscription = {
   chatId: number;
@@ -257,15 +258,16 @@ export type Subscriptions = {
   listByTopic(topic: string): Promise<ChatSubscription[]>;
 };
 
+/** Each text is one value, or one per language (see `Translations`) */
 export type SubscriptionsTexts = {
-  subscribed: (topics: string[]) => string;
-  unsubscribed: string;
-  unknownTopic: (topic: string, topics: readonly string[]) => string;
-  status: (topics: string[]) => string;
+  subscribed: Localized<(topics: string[]) => string>;
+  unsubscribed: Localized<string>;
+  unknownTopic: Localized<(topic: string, topics: readonly string[]) => string>;
+  status: Localized<(topics: string[]) => string>;
   /** Descriptions of /subscribe, /unsubscribe and /status in /help and the command menu */
-  subscribeDescription: string;
-  unsubscribeDescription: string;
-  statusDescription: string;
+  subscribeDescription: Localized<string>;
+  unsubscribeDescription: Localized<string>;
+  statusDescription: Localized<string>;
 };
 
 export type TgSubscriptionsOptions = {
@@ -302,6 +304,7 @@ const tgSubscriptionsPlugin: FastifyPluginAsync<
 > = async (fastify, options) => {
   const { store, topics, commands = true } = options;
   const texts = { ...DEFAULT_TEXTS, ...options.texts };
+  const { text } = fastify.tg;
 
   const subscriptions: Subscriptions = {
     store,
@@ -340,13 +343,15 @@ const tgSubscriptionsPlugin: FastifyPluginAsync<
     handler: async (ctx) => {
       const parsed = parseTopic(String(ctx.match ?? ''));
       if (!parsed.ok)
-        return ctx.reply(texts.unknownTopic(parsed.topic, topics));
+        return ctx.reply(
+          (await text(texts.unknownTopic, ctx))(parsed.topic, topics),
+        );
 
       const chat = await subscriptions.subscribe(
         ctx.chat!.id,
         parsed.topics ?? [...topics],
       );
-      return ctx.reply(texts.subscribed(chat.topics));
+      return ctx.reply((await text(texts.subscribed, ctx))(chat.topics));
     },
   });
 
@@ -357,10 +362,16 @@ const tgSubscriptionsPlugin: FastifyPluginAsync<
     handler: async (ctx) => {
       const parsed = parseTopic(String(ctx.match ?? ''));
       if (!parsed.ok)
-        return ctx.reply(texts.unknownTopic(parsed.topic, topics));
+        return ctx.reply(
+          (await text(texts.unknownTopic, ctx))(parsed.topic, topics),
+        );
 
       const chat = await subscriptions.unsubscribe(ctx.chat!.id, parsed.topics);
-      return ctx.reply(chat ? texts.status(chat.topics) : texts.unsubscribed);
+      return ctx.reply(
+        chat
+          ? (await text(texts.status, ctx))(chat.topics)
+          : await text(texts.unsubscribed, ctx),
+      );
     },
   });
 
@@ -369,7 +380,7 @@ const tgSubscriptionsPlugin: FastifyPluginAsync<
     description: texts.statusDescription,
     handler: async (ctx) => {
       const chat = await store.get(ctx.chat!.id);
-      return ctx.reply(texts.status(chat?.topics ?? []));
+      return ctx.reply((await text(texts.status, ctx))(chat?.topics ?? []));
     },
   });
 };

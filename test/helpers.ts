@@ -117,7 +117,13 @@ export const message = (
     chatId = 10,
     userId = 20,
     chatType = 'private',
-  }: { chatId?: number; userId?: number; chatType?: 'private' | 'group' } = {},
+    languageCode,
+  }: {
+    chatId?: number;
+    userId?: number;
+    chatType?: 'private' | 'group';
+    languageCode?: string;
+  } = {},
 ): Update => ({
   update_id: ++updateId,
   message: {
@@ -127,7 +133,12 @@ export const message = (
       chatType === 'private'
         ? { id: chatId, type: 'private', first_name: 'U' }
         : { id: chatId, type: 'group', title: 'G' },
-    from: { id: userId, is_bot: false, first_name: 'U' },
+    from: {
+      id: userId,
+      is_bot: false,
+      first_name: 'U',
+      ...(languageCode && { language_code: languageCode }),
+    },
     text,
     entities: text.startsWith('/')
       ? [{ type: 'bot_command', offset: 0, length: text.split(' ')[0]!.length }]

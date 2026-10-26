@@ -4,13 +4,21 @@ import type { FastifyPluginAsync } from 'fastify';
 import { Bot, webhookCallback, type Api, type Context } from 'grammy';
 import { autoRetry } from '@grammyjs/auto-retry';
 import type { UserFromGetMe } from 'grammy/types';
+import {
+  languagesOf,
+  localize,
+  userLanguage,
+  type LanguageResolver,
+  type Localized,
+} from './text.js';
 
 /** Who may run a command: everyone, bot admins (by Telegram user id), or admins of the group */
 export type CommandScope = 'all' | 'admin' | 'chatAdmin';
 
 export type CommandDefinition = {
   command: string;
-  description: string;
+  /** One description, or one per language for /help and the command menu */
+  description: Localized<string>;
   scope?: CommandScope;
   /** Hidden commands work but are not listed in /help and the Telegram command menu */
   hidden?: boolean;
@@ -19,17 +27,18 @@ export type CommandDefinition = {
 
 export type BotMode = 'polling' | 'webhook' | 'none';
 
+/** Each text is one string, or one per language (see `Translations`) */
 export type TgBotTexts = {
-  start: string;
-  helpTitle: string;
-  forbidden: string;
+  start: Localized<string>;
+  helpTitle: Localized<string>;
+  forbidden: Localized<string>;
   /**
    * Description of /start, seen only in `app.tg.commands()`: /start is hidden, so it is
    * not listed in /help or the Telegram command menu
    */
-  startDescription: string;
+  startDescription: Localized<string>;
   /** Description of /help in /help and the Telegram command menu */
-  helpDescription: string;
+  helpDescription: Localized<string>;
 };
 
 export type TgBotOptions = {
@@ -51,6 +60,11 @@ export type TgBotOptions = {
   /** Extra API transformers, applied before auto-retry (e.g. a fake API in tests) */
   configureApi?: (api: Api) => void;
   texts?: Partial<TgBotTexts>;
+  /**
+   * The language of an update's texts, e.g. one the chat chose in settings; defaults to
+   * the user's Telegram language. Resolved once per update.
+   */
+  language?: LanguageResolver;
 };
 
 /**
@@ -92,6 +106,10 @@ export type TgBot = {
   command: (definition: CommandDefinition) => void;
   commands: () => readonly CommandDefinition[];
   isAdmin: (userId: number | undefined) => boolean;
+  /** The update's language from the `language` option */
+  language: (ctx: Context) => Promise<string | undefined>;
+  /** A value in the update's language */
+  text: <T>(value: Localized<T>, ctx: Context) => Promise<T>;
 };
 
 declare module 'fastify' {
@@ -114,6 +132,24 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
 ) => {
   const { token, mode = 'polling', webhook, admins = [], botInfo } = options;
   const texts = { ...DEFAULT_TEXTS, ...options.texts };
+  const resolveLanguage = options.language ?? userLanguage;
+  const languages = new WeakMap<Context, Promise<string | undefined>>();
+  const language = (ctx: Context) => {
+    let found = languages.get(ctx);
+    if (!found) {
+      // A failed lookup must not cost the reply: the default texts then
+      found = Promise.resolve()
+        .then(() => resolveLanguage(ctx))
+        .catch((error: unknown) => {
+          fastify.log.warn({ err: error }, 'tg-kit language lookup failed');
+          return undefined;
+        });
+      languages.set(ctx, found);
+    }
+    return found;
+  };
+  const text = async <T>(value: Localized<T>, ctx: Context) =>
+    localize(value, await language(ctx));
 
   if (mode === 'webhook' && !webhook) {
     throw new Error(
@@ -185,7 +221,7 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
         allowed,
       });
       if (!allowed) {
-        await ctx.reply(texts.forbidden);
+        await ctx.reply(await text(texts.forbidden, ctx));
         return;
       }
       await definition.handler(ctx);
@@ -199,19 +235,21 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
     command: 'start',
     description: texts.startDescription,
     hidden: true,
-    handler: (ctx) => ctx.reply(texts.start),
+    handler: async (ctx) => ctx.reply(await text(texts.start, ctx)),
   });
   command({
     command: 'help',
     description: texts.helpDescription,
-    handler: (ctx) => {
+    handler: async (ctx) => {
+      const code = await language(ctx);
       const isBotAdmin = isAdmin(ctx.from?.id);
       const lines = visibleCommands()
         .filter((definition) => isBotAdmin || definition.scope !== 'admin')
         .map(
-          (definition) => `/${definition.command} — ${definition.description}`,
+          (definition) =>
+            `/${definition.command} — ${localize(definition.description, code)}`,
         );
-      return ctx.reply([texts.helpTitle, ...lines].join('\n'));
+      return ctx.reply([localize(texts.helpTitle, code), ...lines].join('\n'));
     },
   });
 
@@ -222,20 +260,51 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
     );
   }
 
+  /**
+   * The default menu, plus one per language some description has. Telegram takes only
+   * two-letter codes there, so keys like `pt-br` show only in replies.
+   */
+  const setMenus = async () => {
+    const menuCommands = visibleCommands().filter(
+      (definition) => definition.scope !== 'admin',
+    );
+    const menu = (code?: string) =>
+      menuCommands.map(({ command: name, description }) => ({
+        command: name,
+        description: localize(description, code),
+      }));
+    const codes = new Set(
+      menuCommands
+        .flatMap(({ description }) => languagesOf(description))
+        .filter((code) => /^[a-z]{2}$/.test(code)),
+    );
+    // Each menu on its own: a rejected translation must not cost the others
+    const set = async (...args: Parameters<Api['setMyCommands']>) => {
+      try {
+        await bot.api.setMyCommands(...args);
+      } catch (error) {
+        fastify.log.error(
+          { err: error, language: args[1]?.language_code },
+          'telegram command menu failed',
+        );
+      }
+    };
+    await set(menu());
+    for (const code of codes) {
+      // Telegram's list of codes is a closed union; the check above keeps the shape
+      await set(menu(code), {
+        language_code: code,
+      } as Parameters<Api['setMyCommands']>[1]);
+    }
+  };
+
   // A Telegram outage must not keep the server from starting: log and carry on
   fastify.addHook('onReady', async () => {
     if (mode === 'none') return;
 
     try {
       await bot.init();
-      await bot.api.setMyCommands(
-        visibleCommands()
-          .filter((definition) => definition.scope !== 'admin')
-          .map(({ command: name, description }) => ({
-            command: name,
-            description,
-          })),
-      );
+      await setMenus();
 
       if (mode === 'webhook' && webhookUrl && webhook) {
         await bot.api.setWebhook(webhookUrl, {
@@ -276,6 +345,8 @@ const tgBotPlugin: FastifyPluginAsync<TgBotOptions> = async (
     command,
     commands: () => registry,
     isAdmin,
+    language,
+    text,
   } satisfies TgBot);
 };
 
