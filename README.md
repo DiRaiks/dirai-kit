@@ -18,6 +18,7 @@ Most bots repeat the same plumbing: `/start` and `/help`, a list of chats to not
 ## Features
 
 - **Commands with scopes.** Everyone, bot admins, or admins of the group (anonymous admins and channels included). `/help` and the Telegram command menu are generated.
+- **Texts per language.** Replies, `/help` and the command menu in the chat's language, with a fallback for the rest.
 - **Subscriptions.** `/subscribe`, `/unsubscribe`, `/status` per topic, stored in memory, MongoDB or Postgres, with per-chat settings.
 - **Broadcasts that behave.** One queue under Telegram's rate limits, automatic retries on 429, chats that blocked the bot are unsubscribed, groups upgraded to supergroups are followed.
 - **Live messages.** Send, pin, edit and unpin, plus silent sends, to keep a status message up to date while short updates go out quietly.
@@ -144,6 +145,7 @@ Creates the grammY bot as `app.tg.bot`, retries on rate limits and logs failed u
 | `botInfo`      | Skips `getMe`, for tests                                                                                                                                                                                  |
 | `configureApi` | Extra API transformers, e.g. a fake API in tests                                                                                                                                                          |
 | `texts`        | Overrides for the `/start` reply, the `/help` title, the "forbidden" reply, and the command descriptions (`helpDescription`; `startDescription` only shows in `app.tg.commands()`, as `/start` is hidden) |
+| `language`     | `(ctx) => code \| undefined`, sync or async: the update's language, e.g. one the chat chose in settings. Defaults to the user's Telegram language                                                         |
 
 ```ts
 app.tg.command({ command, description, scope, hidden, handler });
@@ -155,13 +157,40 @@ app.tg.command({ command, description, scope, hidden, handler });
 | `admin`     | User ids from `admins`                                                                |
 | `chatAdmin` | Anyone in a private chat; in groups only admins (anonymous admins too); channel posts |
 
+`app.tg.text(value, ctx)` resolves a `Localized` value in the update's language, and `app.tg.language(ctx)` returns that language.
+
+#### Languages
+
+Every text and command description takes either one value or one per language. Keys are Telegram language codes; `default` serves the rest. `default` is required; keys match in any case. A reply looks up its language, then the base language (`pt` for `pt-br`), then `default`. The language is resolved once per update, so a command that changes it answers in the old one; if the resolver throws, the update gets the default texts.
+
+```ts
+await app.register(tgBot, {
+  token,
+  texts: {
+    start: { default: 'Hi! Commands: /help', ru: 'Привет! Команды: /help' },
+    helpDescription: { default: 'List commands', ru: 'Список команд' },
+  },
+  // Optional: a language the chat chose instead of the user's Telegram one
+  language: async (ctx) => (await settingsOf(ctx.chat?.id))?.language,
+});
+
+app.tg.command({
+  command: 'watch',
+  description: { default: 'Watch an address', ru: 'Следить за адресом' },
+  handler: async (ctx) =>
+    ctx.reply(await app.tg.text({ default: 'Send an address', ru: 'Пришлите адрес' }, ctx)),
+});
+```
+
+The menu is set once for everyone and once per two-letter language some description has (`ru` above). Telegram picks it by the user's app language, so a language from the `language` option shows in replies and `/help`, not in the menu. Commands without a translation keep their default description in a language's menu. A menu Telegram rejects is logged and the rest are still set. Dropping a language later leaves its old menu in Telegram: remove it once with `bot.api.deleteMyCommands({ language_code })`.
+
 On `ready` the plugin sets the command menu and starts polling or registers the webhook. A Telegram outage at startup is logged and does not stop the server. On `close` polling stops.
 
 ### `tgSubscriptions`
 
 Adds `/subscribe [topic]`, `/unsubscribe [topic]` (both `chatAdmin`) and `/status`. Without a topic, `/subscribe` takes every topic and `/unsubscribe` removes the chat. The same operations are available in code as `app.subscriptions`.
 
-`texts` overrides the replies (`subscribed`, `unsubscribed`, `unknownTopic`, `status`) and the command descriptions (`subscribeDescription`, `unsubscribeDescription`, `statusDescription`); the defaults are in Russian.
+`texts` overrides the replies (`subscribed`, `unsubscribed`, `unknownTopic`, `status`) and the command descriptions (`subscribeDescription`, `unsubscribeDescription`, `statusDescription`); the defaults are in Russian. Each takes one value per language too, the reply functions included: `subscribed: { default: (topics) => ..., ru: (topics) => ... }`.
 
 | Store                                      | Use                                                                                                                                                                                                                                                                                                |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -8,6 +8,8 @@ export type {
   TgBotTexts,
   TgEvents,
 } from './bot.js';
+export { languagesOf, localize, userLanguage } from './text.js';
+export type { LanguageResolver, Localized, Translations } from './text.js';
 export { tgHealth } from './health.js';
 export type {
   MetricsRegistry,
