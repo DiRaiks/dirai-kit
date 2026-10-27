@@ -26,7 +26,7 @@ Made from the [@dirai-kit/tg](https://github.com/DiRaiks/dirai-kit/tree/main/pac
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `src/app.ts`    | The bot: commands (`/ping`, admin `/chats`, `/subscribe` from the kit), `POST /announce`, health and metrics. Add yours here |
 | `src/config.ts` | Settings from the environment, checked on start                                                                              |
-| `src/index.ts`  | Starts the server; MongoDB keeps subscriptions when `MONGO_URI` is set                                                       |
+| `src/index.ts`  | Starts the server; Postgres keeps subscriptions when `DATABASE_URL` is set                                                   |
 | `test/`         | The bot against a fake Telegram API: `npm test`                                                                              |
 | `Dockerfile`    | Production image; secrets come from the environment at runtime                                                               |
 
@@ -34,4 +34,4 @@ Routes: `/telegram/health` (503 when the bot cannot get updates), `/metrics` (Pr
 
 ## Production
 
-Build the image (`docker build -t my-bot .` after `npm install` has written `package-lock.json`) and run it with `BOT_TOKEN`, `MONGO_URI`, and either polling (no open port needed) or `BOT_MODE=webhook` behind an HTTPS proxy. See the kit's README for webhooks behind Caddy.
+Build the image (`docker build -t my-bot .` after `npm install` has written `package-lock.json`) and run it with `BOT_TOKEN`, `DATABASE_URL`, and either polling (no open port needed) or `BOT_MODE=webhook` behind an HTTPS proxy. See the kit's README for webhooks behind Caddy.

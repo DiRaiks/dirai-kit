@@ -9,6 +9,9 @@ export default defineConfig({
       '@dirai-kit/tg': fileURLToPath(
         new URL('../../packages/tg/src/index.ts', import.meta.url),
       ),
+      '@dirai-kit/pg': fileURLToPath(
+        new URL('../../packages/pg/src/index.ts', import.meta.url),
+      ),
     },
   },
   test: {
