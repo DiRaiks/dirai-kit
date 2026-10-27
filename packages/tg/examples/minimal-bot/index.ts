@@ -16,7 +16,7 @@ import {
   tgHealth,
   tgNotifier,
   tgSubscriptions,
-} from '@dirai/tg-kit';
+} from '@dirai-kit/tg';
 
 const token = process.env.BOT_TOKEN;
 const announceKey = process.env.ANNOUNCE_KEY;

@@ -6,8 +6,8 @@ export default defineConfig({
   root: fileURLToPath(new URL('../../template', import.meta.url)),
   resolve: {
     alias: {
-      '@dirai/tg-kit': fileURLToPath(
-        new URL('../../src/index.ts', import.meta.url),
+      '@dirai-kit/tg': fileURLToPath(
+        new URL('../../packages/tg/src/index.ts', import.meta.url),
       ),
     },
   },

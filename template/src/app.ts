@@ -6,7 +6,7 @@ import {
   tgSubscriptions,
   type SubscriptionStore,
   type TgBotOptions,
-} from '@dirai/tg-kit';
+} from '@dirai-kit/tg';
 import Fastify from 'fastify';
 
 import type { Config } from './config.js';

@@ -1,9 +1,10 @@
 name: Release
 
-# Every push to main is analysed by semantic-release: fix → patch, feat → minor,
-# feat! or BREAKING CHANGE → major. After the CI checks pass it tags the commit,
-# publishes to npm with provenance over OIDC (npm trusted publishing, no token
-# stored) and creates a GitHub Release.
+# Every push to main is analysed by multi-semantic-release, per package and only
+# over the commits that touch it: fix → patch, feat → minor, feat! or BREAKING
+# CHANGE → major. After the CI checks pass it tags each released package
+# (`@dirai-kit/tg@1.6.0`), publishes it to npm with provenance over OIDC (npm
+# trusted publishing, no token stored) and creates a GitHub Release.
 on:
   push:
     branches: [main]
@@ -39,7 +40,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # npm publish also runs prepublishOnly: lint, types, tests, build and the package check
-      - run: npx semantic-release
+      # npm publish also runs each package's prepublishOnly: lint, types, tests,
+      # build and the package check
+      - run: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

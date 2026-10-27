@@ -1,4 +1,4 @@
-import { memoryStore, mongoStore } from '@dirai/tg-kit';
+import { memoryStore, mongoStore } from '@dirai-kit/tg';
 import { MongoClient } from 'mongodb';
 
 import { buildApp } from './app.js';

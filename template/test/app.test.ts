@@ -1,4 +1,4 @@
-import { memoryStore } from '@dirai/tg-kit';
+import { memoryStore } from '@dirai-kit/tg';
 import type { Api } from 'grammy';
 import { afterEach, describe, expect, it } from 'vitest';
 

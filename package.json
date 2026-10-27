@@ -1,67 +1,43 @@
 {
-  "name": "@dirai/tg-kit",
-  "version": "0.1.0",
-  "description": "Fastify plugins for building Telegram bots with grammY: commands, chat subscriptions and rate-limited broadcasts",
-  "keywords": [
-    "telegram",
-    "telegram-bot",
-    "grammy",
-    "fastify",
-    "fastify-plugin",
-    "prometheus"
-  ],
+  "name": "dirai-kit",
+  "private": true,
+  "description": "Packages for Node services with Fastify, Postgres and Telegram bots",
   "license": "MIT",
-  "author": "DiRaiks",
-  "homepage": "https://github.com/DiRaiks/tg-bot-kit#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/DiRaiks/tg-bot-kit.git"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist",
-    "CHANGELOG.md"
+  "workspaces": [
+    "packages/*"
   ],
   "engines": {
     "node": ">=24.10",
     "npm": ">=11.21"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json",
-    "types": "tsc -p tsconfig.json --noEmit",
+    "build": "npm run build --workspaces",
+    "types": "npm run types --workspaces",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier . --check",
-    "test": "vitest run",
-    "prepublishOnly": "npm run lint && npm run types && npm test && npm run build && npm run pack:check",
-    "pack:check": "node scripts/check-pack.mjs",
-    "prepare": "husky",
-    "examples:types": "tsc -p examples/tsconfig.json",
-    "template:check": "tsc -p scripts/template/tsconfig.json && vitest run --config scripts/template/vitest.config.ts"
+    "test": "npm test --workspaces",
+    "pack:check": "npm run pack:check --workspaces",
+    "examples:types": "npm run examples:types --workspaces --if-present",
+    "template:check": "tsc -p scripts/template/tsconfig.json && vitest run --config scripts/template/vitest.config.ts",
+    "release": "multi-semantic-release",
+    "prepare": "husky"
   },
-  "dependencies": {
-    "@grammyjs/auto-retry": "^2.0.2",
-    "fastify-plugin": "^6.0.1",
-    "grammy": "^1.46.0"
-  },
-  "peerDependencies": {
-    "fastify": "^5.0.0",
-    "@prometheus-io/client": "^0.16.0"
+  "multi-release": {
+    "tagFormat": "${name}@${version}",
+    "ignorePrivate": true,
+    "deps": {
+      "bump": "override",
+      "release": "patch",
+      "prefix": "^"
+    }
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.5.9",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
+    "@electric-sql/pglite": "0.5.9",
     "@eslint/js": "^10.0.1",
+    "@lidofinance/multi-semantic-release": "^1.0.3",
     "@prometheus-io/client": "^0.16.1",
     "@types/node": "^24.19.2",
     "eslint": "^10.13.0",
@@ -79,10 +55,5 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0",
     "vitest": "^5.0.5"
-  },
-  "peerDependenciesMeta": {
-    "@prometheus-io/client": {
-      "optional": true
-    }
   }
 }
