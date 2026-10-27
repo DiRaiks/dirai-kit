@@ -44,7 +44,7 @@
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "prepublishOnly": "npm run lint && npm run types && npm test && npm run build && npm run pack:check",
-    "pack:check": "node scripts/check-pack.mjs",
+    "pack:check": "node ../../scripts/check-pack.mjs",
     "examples:types": "tsc -p examples/tsconfig.json"
   },
   "dependencies": {
