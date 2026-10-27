@@ -2,9 +2,11 @@
 
 Packages for Node services built with Fastify, Postgres and Telegram bots, published under the `@dirai-kit` npm scope.
 
-| Package                        | What it is                                                                                        |
-| ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| [`@dirai-kit/tg`](packages/tg) | Fastify plugins for Telegram bots on grammY: commands, subscriptions, broadcasts, health, metrics |
+| Package                                  | What it is                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [`@dirai-kit/tg`](packages/tg)           | Fastify plugins for Telegram bots on grammY: commands, subscriptions, broadcasts, health, metrics |
+| [`@dirai-kit/pg`](packages/pg)           | Postgres: a resilient pool, migrations under an advisory lock, ping, error codes, test databases  |
+| [`@dirai-kit/fastify`](packages/fastify) | Fastify: /health and /metrics, JSON errors, safe TRUST_PROXY, redacted logs, graceful shutdown    |
 
 [`template`](template) is a complete bot to start from: `npx degit DiRaiks/dirai-kit/template my-bot`.
 
