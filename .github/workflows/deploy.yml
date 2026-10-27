@@ -1,0 +1,171 @@
+name: Deploy (shared)
+
+# Builds a service's images, pushes them to GHCR and restarts its Docker Compose stack
+# on a server over SSH. Called from a service repository:
+#
+#   jobs:
+#     deploy:
+#       if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+#       uses: DiRaiks/dirai-kit/.github/workflows/deploy.yml@<commit> # deploy-v1
+#       with:
+#         commit: ${{ github.event.workflow_run.head_sha || github.sha }}
+#         images: '[{"name": "my-api", "dockerfile": "apps/api/Dockerfile"}]'
+#         services: api
+#         deploy-path: ${{ vars.DEPLOY_PATH }}
+#       secrets: inherit
+#
+# Secrets (of the repository or its `production` environment): VPS_HOST, VPS_USER,
+# VPS_SSH_KEY, and VPS_PORT when not 22. Without deploy-path only the images are built.
+
+on:
+  workflow_call:
+    inputs:
+      commit:
+        description: The commit to build and deploy (the one CI tested)
+        type: string
+        required: true
+      images:
+        description: 'JSON list of {"name", "dockerfile", "context"?}; images go to ghcr.io/<owner>/<name>'
+        type: string
+        required: true
+      services:
+        description: Space separated Compose services that must become healthy
+        type: string
+        required: true
+      files:
+        description: Comma separated files from the service repository to upload next to compose.yml
+        type: string
+        default: deploy/compose.yml,deploy/Caddyfile,deploy/postgres.env
+      deploy-path:
+        description: Folder of the stack on the server (a repository variable); empty skips the deploy
+        type: string
+        default: ''
+
+concurrency:
+  group: deploy-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        image: ${{ fromJSON(inputs.images) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.commit }}
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}
+          # Not type=sha: under workflow_run the context is the tip of main, not the
+          # commit CI checked
+          tags: |
+            type=raw,value=${{ inputs.commit }}
+            type=raw,value=latest
+          labels: org.opencontainers.image.revision=${{ inputs.commit }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image.context || '.' }}
+          file: ${{ matrix.image.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}
+
+  deploy:
+    needs: images
+    if: inputs.deploy-path != ''
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.commit }}
+          path: service
+      # postgres.compose.yml from the same commit of dirai-kit as this workflow (main if
+      # the runner does not report the workflow's own commit)
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ job.workflow_repository || 'DiRaiks/dirai-kit' }}
+          ref: ${{ job.workflow_sha || 'main' }}
+          path: kit
+          sparse-checkout: deploy
+      - name: Collect the files to upload
+        env:
+          FILES: ${{ inputs.files }}
+        run: |
+          mkdir upload
+          cp kit/deploy/postgres.compose.yml upload/
+          IFS=','
+          for file in $FILES; do
+            # Optional files (a Caddyfile, postgres.env) may be missing in a service
+            if [ -f "service/$file" ]; then cp "service/$file" upload/; fi
+          done
+          test -f upload/compose.yml || { echo "compose.yml is not among the files"; exit 1; }
+          ls -l upload
+      - name: Upload compose files
+        # Third-party actions that receive the SSH key are pinned to a commit
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: upload/*
+          target: ${{ inputs.deploy-path }}
+          strip_components: 1
+          overwrite: true
+      - name: Pull and restart
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        env:
+          DEPLOY_PATH: ${{ inputs.deploy-path }}
+          IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+          IMAGE_TAG: ${{ inputs.commit }}
+          SERVICES: ${{ inputs.services }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          envs: DEPLOY_PATH,IMAGE_REGISTRY,IMAGE_TAG,SERVICES,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -eu
+            cd "$DEPLOY_PATH"
+            test -f .env || { echo ".env is missing in $DEPLOY_PATH"; exit 1; }
+            registry=$(echo "$IMAGE_REGISTRY" | tr '[:upper:]' '[:lower:]')
+            # compose prefers the shell's variables to --env-file: export the lowercase one
+            export IMAGE_REGISTRY="$registry"
+            printf 'IMAGE_REGISTRY=%s\nIMAGE_TAG=%s\n' "$registry" "$IMAGE_TAG" > images.env
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            compose="docker compose --env-file .env --env-file images.env"
+            $compose pull
+            $compose up -d --remove-orphans
+            docker logout ghcr.io
+            # Wait for each service's own health check
+            for service in $SERVICES; do
+              for attempt in $(seq 1 30); do
+                status=$(docker inspect -f '{{.State.Health.Status}}' "$($compose ps -q "$service")")
+                [ "$status" = healthy ] && break
+                [ "$attempt" = 30 ] && { echo "$service is $status"; $compose logs --tail 50 "$service"; exit 1; }
+                sleep 5
+              done
+              echo "$service is healthy"
+            done
+            docker image prune -f
