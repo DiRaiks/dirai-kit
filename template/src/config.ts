@@ -4,7 +4,8 @@ export type Config = {
   mode: 'polling' | 'webhook';
   webhook?: { url: string; secretToken: string };
   admins: number[];
-  mongoUri?: string;
+  /** Postgres for subscriptions; without it they live in memory */
+  databaseUrl?: string;
   /** Protects POST /announce; without it the route is off */
   announceKey?: string;
   port: number;
@@ -32,7 +33,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv): Config => {
       .map((id) => id.trim())
       .filter(Boolean)
       .map(Number),
-    mongoUri: env.MONGO_URI?.trim() || undefined,
+    databaseUrl: env.DATABASE_URL?.trim() || undefined,
     announceKey: env.ANNOUNCE_KEY?.trim() || undefined,
     port: Number(env.PORT ?? 3000),
   };

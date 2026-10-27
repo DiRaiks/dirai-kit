@@ -3,7 +3,10 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "../..",
-    "paths": { "@dirai-kit/tg": ["../../packages/tg/src/index.ts"] }
+    "paths": {
+      "@dirai-kit/tg": ["../../packages/tg/src/index.ts"],
+      "@dirai-kit/pg": ["../../packages/pg/src/index.ts"]
+    }
   },
   "include": ["../../template/src", "../../template/test"]
 }

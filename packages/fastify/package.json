@@ -1,0 +1,65 @@
+{
+  "name": "@dirai-kit/fastify",
+  "version": "1.0.0",
+  "description": "Fastify 5 plumbing for services: /health and /metrics on one Prometheus registry, JSON errors, safe TRUST_PROXY, redacted logs and graceful shutdown",
+  "keywords": [
+    "fastify",
+    "fastify-plugin",
+    "health",
+    "metrics",
+    "prometheus",
+    "trust-proxy",
+    "graceful-shutdown"
+  ],
+  "license": "MIT",
+  "author": "DiRaiks",
+  "homepage": "https://github.com/DiRaiks/dirai-kit/tree/main/packages/fastify#readme",
+  "bugs": "https://github.com/DiRaiks/dirai-kit/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DiRaiks/dirai-kit.git",
+    "directory": "packages/fastify"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ops": {
+      "types": "./dist/ops.d.ts",
+      "default": "./dist/ops.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24.10",
+    "npm": ">=11.21"
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "types": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "prepublishOnly": "npm run lint && npm run types && npm test && npm run build && npm run pack:check",
+    "pack:check": "node ../../scripts/check-pack.mjs"
+  },
+  "dependencies": {
+    "fastify-plugin": "^6.0.1"
+  },
+  "peerDependencies": {
+    "fastify": "^5.0.0",
+    "@prometheus-io/client": "^0.16.0"
+  },
+  "peerDependenciesMeta": {
+    "@prometheus-io/client": {
+      "optional": true
+    }
+  }
+}
