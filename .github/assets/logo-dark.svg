@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="140" viewBox="0 0 640 140" role="img" aria-label="dirai-kit">
+  <!-- One beam in, three packages out: a nod to the author's avatar -->
+  <g transform="translate(12 16)">
+    <line x1="0" y1="62" x2="46" y2="62" stroke="#fafafa" stroke-width="4" stroke-linecap="round"/>
+    <polygon points="84.8,46.0 152,38 152,55 88.2,52.4" fill="#f87171"/>
+    <polygon points="88.2,52.4 152,55 152,73 91.5,58.8" fill="#fbbf24"/>
+    <polygon points="91.5,58.8 152,73 152,90 94.9,65.2" fill="#2dd4bf"/>
+    <polygon points="68,14 26,94 110,94" fill="#09090b" stroke="#fafafa" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+  <text x="200" y="80" fill="#fafafa" font-family="ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace" font-size="60" font-weight="700" letter-spacing="-1">dirai-kit</text>
+  <text x="203" y="110" fill="#a1a1aa" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="500">Fastify · Postgres · Telegram bots</text>
+</svg>
