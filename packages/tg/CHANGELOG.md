@@ -1,6 +1,6 @@
 # Changelog
 
-Releases are published by [semantic-release](https://semantic-release.gitbook.io), and their notes are on [GitHub Releases](https://github.com/DiRaiks/tg-bot-kit/releases). This file is no longer updated.
+Releases are published by [semantic-release](https://semantic-release.gitbook.io), and their notes are on [GitHub Releases](https://github.com/DiRaiks/dirai-kit/releases). This file is no longer updated.
 
 ## 0.1.0
 

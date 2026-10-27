@@ -1,6 +1,6 @@
 # My Telegram bot
 
-Made from the [@dirai/tg-kit](https://github.com/DiRaiks/tg-bot-kit) template: Fastify, grammY, chat subscriptions, rate-limited broadcasts, health checks and Prometheus metrics.
+Made from the [@dirai-kit/tg](https://github.com/DiRaiks/dirai-kit/tree/main/packages/tg) template: Fastify, grammY, chat subscriptions, rate-limited broadcasts, health checks and Prometheus metrics.
 
 ## Start
 

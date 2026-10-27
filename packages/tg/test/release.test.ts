@@ -9,7 +9,10 @@ type PluginConfig = Record<string, unknown>;
 
 const pluginConfig = async (name: string): Promise<PluginConfig> => {
   const config = JSON.parse(
-    await readFile(new URL('../.releaserc.json', import.meta.url), 'utf8'),
+    await readFile(
+      new URL('../../../.releaserc.json', import.meta.url),
+      'utf8',
+    ),
   ) as { plugins: (string | [string, PluginConfig])[] };
   const entry = config.plugins.find((plugin) =>
     Array.isArray(plugin) ? plugin[0] === name : plugin === name,
@@ -21,7 +24,7 @@ const silent = { log: () => {}, error: () => {}, success: () => {} };
 const context = (messages: string[]) => ({
   cwd: process.cwd(),
   logger: silent,
-  options: { repositoryUrl: 'https://github.com/DiRaiks/tg-bot-kit.git' },
+  options: { repositoryUrl: 'https://github.com/DiRaiks/dirai-kit.git' },
   lastRelease: { gitTag: 'v1.0.0', version: '1.0.0' },
   nextRelease: { gitTag: 'v2.0.0', version: '2.0.0' },
   commits: messages.map((message, index) => ({

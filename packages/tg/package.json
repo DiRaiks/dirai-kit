@@ -1,0 +1,64 @@
+{
+  "name": "@dirai-kit/tg",
+  "version": "1.5.0",
+  "description": "Fastify plugins for building Telegram bots with grammY: commands, chat subscriptions and rate-limited broadcasts",
+  "keywords": [
+    "telegram",
+    "telegram-bot",
+    "grammy",
+    "fastify",
+    "fastify-plugin",
+    "prometheus"
+  ],
+  "license": "MIT",
+  "author": "DiRaiks",
+  "homepage": "https://github.com/DiRaiks/dirai-kit/tree/main/packages/tg#readme",
+  "bugs": "https://github.com/DiRaiks/dirai-kit/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DiRaiks/dirai-kit.git",
+    "directory": "packages/tg"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=24.10",
+    "npm": ">=11.21"
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "types": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "prepublishOnly": "npm run lint && npm run types && npm test && npm run build && npm run pack:check",
+    "pack:check": "node scripts/check-pack.mjs",
+    "examples:types": "tsc -p examples/tsconfig.json"
+  },
+  "dependencies": {
+    "@grammyjs/auto-retry": "^2.0.2",
+    "fastify-plugin": "^6.0.1",
+    "grammy": "^1.46.0"
+  },
+  "peerDependencies": {
+    "fastify": "^5.0.0",
+    "@prometheus-io/client": "^0.16.0"
+  },
+  "peerDependenciesMeta": {
+    "@prometheus-io/client": {
+      "optional": true
+    }
+  }
+}
