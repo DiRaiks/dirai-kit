@@ -45,3 +45,8 @@ jobs:
       - run: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # What was published, per package, on the run's summary page
+      - name: Release summary
+        run: scripts/release-summary.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
